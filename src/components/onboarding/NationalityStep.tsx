@@ -11,7 +11,7 @@ interface NationalityStepProps {
 const commonNationalities = [
   'USA', 'China', 'Japan', 'Vietnam', 'Thailand',
   'Indonesia', 'India', 'France', 'Germany', 'UK',
-  'Canada', 'Australia', 'Philippines', 'Malaysia', 'Singapore'
+  'Canada', 'Australia', 'Philippines', 'Malaysia', 'Singapore', 'Korea'
 ];
 
 export function NationalityStep({ value, onChange, onNext }: NationalityStepProps) {

@@ -3,6 +3,7 @@ import { Send, ChevronDown, ChevronUp, MessageSquare, HelpCircle } from 'lucide-
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
+import { createPortal } from 'react-dom';
 
 const faqs = [
   {
@@ -38,6 +39,10 @@ export function FeedbackSupport() {
   const [submitted, setSubmitted] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
+  // ⭐ 추가한 state
+  const [showModal, setShowModal] = useState(false);
+  const [title, setTitle] = useState('');
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
@@ -45,6 +50,8 @@ export function FeedbackSupport() {
       setSubmitted(false);
       setFeedbackText('');
       setEmail('');
+      setTitle('');
+      setShowModal(false);
     }, 3000);
   };
 
@@ -53,9 +60,7 @@ export function FeedbackSupport() {
       <div className="bg-gradient-to-r from-orange-500 to-pink-500 p-6 text-white">
         <div className="max-w-md mx-auto">
           <h1 className="text-white mb-2">Help & Feedback</h1>
-          <p className="text-sm opacity-90">
-            We're here to help you
-          </p>
+          <p className="text-sm opacity-90">We're here to help you</p>
         </div>
       </div>
 
@@ -107,9 +112,7 @@ export function FeedbackSupport() {
                   </button>
                   {expandedFaq === index && (
                     <div className="px-4 pb-4">
-                      <p className="text-sm text-gray-600 leading-relaxed">
-                        {faq.answer}
-                      </p>
+                      <p className="text-sm text-gray-600 leading-relaxed">{faq.answer}</p>
                     </div>
                   )}
                 </div>
@@ -132,71 +135,190 @@ export function FeedbackSupport() {
           </>
         ) : (
           <>
-            {/* Feedback Form */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
-              <h2 className="text-gray-800 mb-4">Send us your feedback</h2>
-              
-              {submitted ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-3xl">✓</span>
-                  </div>
-                  <p className="text-gray-800 mb-2">Thank you!</p>
-                  <p className="text-sm text-gray-500">
-                    Your feedback has been submitted
-                  </p>
-                </div>
-              ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <label className="text-sm text-gray-600 mb-2 block">
-                      Email (optional)
-                    </label>
-                    <Input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="your@email.com"
-                      className="rounded-xl"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm text-gray-600 mb-2 block">
-                      Your feedback
-                    </label>
-                    <Textarea
-                      value={feedbackText}
-                      onChange={(e) => setFeedbackText(e.target.value)}
-                      placeholder="Tell us what you think, report issues, or suggest new features..."
-                      rows={6}
-                      required
-                      className="rounded-xl resize-none"
-                    />
-                  </div>
+  
+  {showModal &&
+  createPortal(
+    <div
+      className="
+        fixed inset-0 
+        bg-black/50 
+        z-[999999] 
+        flex items-center justify-center
+      "
+      onClick={() => setShowModal(false)}
+    >
 
-                  <Button
-                    type="submit"
-                    className="w-full rounded-full bg-orange-500 hover:bg-orange-600"
-                  >
-                    <Send className="size-4 mr-2" />
-                    Send Feedback
-                  </Button>
-                </form>
-              )}
+      <div
+        className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md z-[1000000]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        
+        <h2 className="text-gray-800 mb-4">Send us your feedback</h2>
+
+        {submitted ? (
+          <div className="text-center py-8">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">✓</span>
+            </div>
+            <p className="text-gray-800 mb-2">Thank you!</p>
+            <p className="text-sm text-gray-500">Your feedback has been submitted</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-sm text-gray-600 mb-2 block">
+                Email (optional)
+              </label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                className="rounded-xl"
+              />
             </div>
 
-            {/* Quick feedback options */}
+            <div>
+              <label className="text-sm text-gray-600 mb-2 block">Title</label>
+              <Input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="What is your issue?"
+                required
+                className="rounded-xl"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm text-gray-600 mb-2 block">Your feedback</label>
+              <Textarea
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                placeholder="Tell us what you think, report issues, or suggest new features..."
+                rows={6}
+                required
+                className="rounded-xl resize-none"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full rounded-full bg-orange-500 hover:bg-orange-600"
+            >
+              <Send className="size-4 mr-2" />
+              Send Feedback
+            </Button>
+
+            <button
+              type="button"
+              className="w-full mt-2 text-sm text-gray-500 underline"
+              onClick={() => setShowModal(false)}
+            >
+              Close
+            </button>
+          </form>
+        )}
+      </div>
+    </div>,
+    document.body
+  )}
+
+            {/* Always-visible Feedback Form (top of feedback page) */}
+<div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
+  <h2 className="text-gray-800 mb-4">Send us your feedback</h2>
+
+  {submitted ? (
+    <div className="text-center py-8">
+      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <span className="text-3xl">✓</span>
+      </div>
+      <p className="text-gray-800 mb-2">Thank you!</p>
+      <p className="text-sm text-gray-500">Your feedback has been submitted</p>
+    </div>
+  ) : (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      
+      {/* Email */}
+      <div>
+        <label className="text-sm text-gray-600 mb-2 block">Email (optional)</label>
+        <Input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="your@email.com"
+          className="rounded-xl"
+        />
+      </div>
+
+      {/* Title */}
+      <div>
+        <label className="text-sm text-gray-600 mb-2 block">Title</label>
+        <Input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="What is your issue?"
+          required
+          className="rounded-xl"
+        />
+      </div>
+
+      {/* Feedback */}
+      <div>
+        <label className="text-sm text-gray-600 mb-2 block">Your feedback</label>
+        <Textarea
+          value={feedbackText}
+          onChange={(e) => setFeedbackText(e.target.value)}
+          placeholder="Tell us what you think, report issues, or suggest new features..."
+          rows={6}
+          required
+          className="rounded-xl resize-none"
+        />
+      </div>
+
+      <Button
+        type="submit"
+        className="w-full rounded-full bg-orange-500 hover:bg-orange-600"
+      >
+        <Send className="size-4 mr-2" />
+        Send Feedback
+      </Button>
+    </form>
+  )}
+</div>
+
+            {/* Quick feedback */}
             <div className="bg-white rounded-2xl p-6 shadow-sm">
               <h3 className="text-gray-700 mb-3">Quick feedback</h3>
               <div className="space-y-2">
-                <button className="w-full p-3 bg-gray-50 rounded-xl text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                <button
+                  className="w-full p-3 bg-gray-50 rounded-xl text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                  onClick={() => {
+                    setTitle('Suggest a new restaurant');
+                    setShowModal(true);
+                  }}
+                >
                   🏪 Suggest a new restaurant
                 </button>
-                <button className="w-full p-3 bg-gray-50 rounded-xl text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+
+                <button
+                  className="w-full p-3 bg-gray-50 rounded-xl text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                  onClick={() => {
+                    setTitle('Report incorrect information');
+                    setShowModal(true);
+                  }}
+                >
                   📝 Report incorrect information
                 </button>
-                <button className="w-full p-3 bg-gray-50 rounded-xl text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+
+                <button
+                  className="w-full p-3 bg-gray-50 rounded-xl text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                  onClick={() => {
+                    setTitle('Request a new feature');
+                    setShowModal(true);
+                  }}
+                >
                   💡 Request a new feature
                 </button>
               </div>

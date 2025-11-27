@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ChevronLeft, MapPin, Flame, MessageCircle, X, Heart } from 'lucide-react';
+import { ChevronLeft, MapPin, Flame, MessageCircle, X, Heart, Search, Filter } from 'lucide-react';
 import { Button } from './ui/button';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { Input } from './ui/input';
 import type { Restaurant, UserProfile, Menu } from '../App';
 
 interface RestaurantDetailProps {
@@ -15,6 +16,10 @@ interface RestaurantDetailProps {
 export function RestaurantDetail({ restaurant, userProfile, onBack, isFavorite, onToggleFavorite }: RestaurantDetailProps) {
   const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
   const [phraseIngredient, setPhraseIngredient] = useState<string | null>(null);
+  const [menuSearchTerm, setMenuSearchTerm] = useState<string>('');
+  const [showFilterSheet, setShowFilterSheet] = useState(false);
+  const [excludedAllergens, setExcludedAllergens] = useState<string[]>([]);
+  const [tempExcludedAllergens, setTempExcludedAllergens] = useState<string[]>([]);
 
   const handleAskInKorean = (menu: Menu, ingredient: string) => {
     setSelectedMenu(menu);
@@ -64,22 +69,24 @@ export function RestaurantDetail({ restaurant, userProfile, onBack, isFavorite, 
         >
           <ChevronLeft className="size-5 text-gray-700" />
         </button>
-        <button
-          onClick={onToggleFavorite}
-          className={`absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-colors ${
-            isFavorite 
-              ? 'bg-orange-500 text-white' 
-              : 'bg-white text-gray-700 hover:bg-orange-50'
-          }`}
-        >
-          <Heart className={`size-5 ${isFavorite ? 'fill-current' : ''}`} />
-        </button>
       </div>
 
       <div className="max-w-md mx-auto px-4 py-6">
         {/* Restaurant Info */}
         <div className="mb-6">
-          <h1 className="text-gray-800 mb-2">{restaurant.name}</h1>
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-gray-800">{restaurant.name}</h1>
+            <button
+              onClick={onToggleFavorite}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ml-2 ${
+                isFavorite 
+                  ? 'bg-orange-500 text-white' 
+                  : 'bg-white text-gray-700 hover:bg-orange-50 border border-gray-200'
+              }`}
+            >
+              <Heart className={`size-5 ${isFavorite ? 'fill-current' : ''}`} />
+            </button>
+          </div>
           <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
             <div className="flex items-center gap-1">
               <MapPin className="size-4" />
@@ -104,20 +111,59 @@ export function RestaurantDetail({ restaurant, userProfile, onBack, isFavorite, 
           </div>
         </div>
 
+        {/* Menu Search (below restaurant info, above the menu list) */}
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+            <Input
+              value={menuSearchTerm}
+              onChange={(e) => setMenuSearchTerm(e.target.value)}
+              placeholder="Search menu items or allergens"
+              className="pl-10 rounded-full border-gray-200 pr-12"
+            />
+            <button
+              onClick={() => {
+                setTempExcludedAllergens(excludedAllergens);
+                setShowFilterSheet(true);
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center bg-white border border-gray-200 shadow-sm"
+              aria-label="Filter menus"
+            >
+              <Filter className="size-4 text-gray-600" />
+            </button>
+          </div>
+        </div>
+
         {/* Menu List */}
         <div>
           <h2 className="text-gray-800 mb-4">Menu</h2>
           <div className="space-y-3">
-            {restaurant.menus.map((menu) => {
-              const hasUserAllergens = menu.allergens.some(allergen =>
-                userProfile.allergies.includes(allergen)
-              );
-
-              return (
-                <div
-                  key={menu.id}
-                  className="bg-gray-50 rounded-2xl p-4"
-                >
+            {restaurant.menus
+              .filter((menu) => {
+                const term = menuSearchTerm.trim().toLowerCase();
+                if (term) {
+                  const matchName = menu.name.toLowerCase().includes(term);
+                  const matchAllergen = menu.allergens.some(a => a.toLowerCase().includes(term));
+                  if (!(matchName || matchAllergen)) return false;
+                }
+                // Exclude menus that contain any allergen selected to be excluded
+                if (excludedAllergens.length > 0) {
+                  if (menu.allergens.some(a => excludedAllergens.includes(a))) {
+                    return false;
+                  }
+                }
+                return true;
+              })
+              .map((menu) => {
+               const hasUserAllergens = menu.allergens.some(allergen =>
+                 userProfile.allergies.includes(allergen)
+               );
+ 
+               return (
+                 <div
+                   key={menu.id}
+                   className="bg-gray-50 rounded-2xl p-4"
+                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
                       <h3 className="text-gray-800 mb-1">{menu.name}</h3>
@@ -186,9 +232,100 @@ export function RestaurantDetail({ restaurant, userProfile, onBack, isFavorite, 
                 </div>
               );
             })}
+            {restaurant.menus.filter(m => {
+              const term = menuSearchTerm.trim().toLowerCase();
+              const matchesTerm = term && (m.name.toLowerCase().includes(term) || m.allergens.some(a => a.toLowerCase().includes(term)));
+              const excluded = excludedAllergens.length > 0 && m.allergens.some(a => excludedAllergens.includes(a));
+              return !(matchesTerm) && !excluded;
+            }).length === restaurant.menus.length && menuSearchTerm.trim() !== '' && (
+               <div className="text-center py-8 text-gray-500">
+                 No menu items match your search.
+               </div>
+             )}
           </div>
         </div>
       </div>
+
+      {/* Filter Bottom Sheet */}
+      {showFilterSheet && (
+        <div className="fixed inset-0 z-[999999]">
+          {/* darker overlay (matches Feedback modal intensity) */}
+          <div
+            className="fixed inset-0 bg-black/60"
+            onClick={() => setShowFilterSheet(false)}
+          />
+
+          <div className="fixed inset-0 flex items-center justify-center p-4">
+            <div
+              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl z-[1000000]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-gray-800">Exclude Ingredients</h3>
+                <button
+                  onClick={() => setShowFilterSheet(false)}
+                  className="text-gray-400"
+                  aria-label="Close filters"
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+
+              {/* Chips — unique allergens present only in this restaurant's menus */}
+              <div className="flex flex-wrap gap-2 mb-4 max-h-60 overflow-y-auto">
+                {Array.from(
+                  new Set(
+                    restaurant.menus.flatMap((m) => (Array.isArray(m.allergens) ? m.allergens : []))
+                  )
+                )
+                  .filter(Boolean)
+                  .map((allergen) => {
+                    const active = tempExcludedAllergens.includes(allergen);
+                    return (
+                      <button
+                        key={allergen}
+                        onClick={() =>
+                          setTempExcludedAllergens((prev) =>
+                            prev.includes(allergen) ? prev.filter((a) => a !== allergen) : [...prev, allergen]
+                          )
+                        }
+                        className={`px-3 py-1.5 rounded-full text-sm transition-all border-2 ${
+                          active ? 'bg-red-100 border-red-300 text-red-700' : 'bg-gray-100 border-gray-200 text-gray-700'
+                        }`}
+                      >
+                        {allergen}
+                      </button>
+                    );
+                  })}
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setTempExcludedAllergens([])}
+                  className="flex-1 px-4 py-2 rounded-full bg-gray-100 text-gray-700"
+                >
+                  Deselect all
+                </button>
+                <button
+                  onClick={() => setShowFilterSheet(false)}
+                  className="px-4 py-2 rounded-full bg-white border border-gray-200 text-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setExcludedAllergens(tempExcludedAllergens);
+                    setShowFilterSheet(false);
+                  }}
+                  className="px-4 py-2 rounded-full bg-orange-500 text-white"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Korean Phrase Card Modal */}
       {selectedMenu && phraseIngredient && (

@@ -37,12 +37,15 @@ export interface Menu {
   isSafe: boolean;
 }
 
-export default function App() {
+export function App() {
   const [isOnboarded, setIsOnboarded] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [currentPage, setCurrentPage] = useState<'home' | 'favorites' | 'support' | 'account'>('home');
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
-  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    const saved = localStorage.getItem('favorites');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   useEffect(() => {
     // Check if user has completed onboarding
@@ -50,12 +53,6 @@ export default function App() {
     if (savedProfile) {
       setUserProfile(JSON.parse(savedProfile));
       setIsOnboarded(true);
-    }
-    
-    // Load favorites
-    const savedFavorites = localStorage.getItem('kneweat-favorites');
-    if (savedFavorites) {
-      setFavoriteIds(JSON.parse(savedFavorites));
     }
   }, []);
 
@@ -79,16 +76,17 @@ export default function App() {
   };
 
   const toggleFavorite = (restaurantId: string) => {
-    const newFavorites = favoriteIds.includes(restaurantId)
-      ? favoriteIds.filter(id => id !== restaurantId)
-      : [...favoriteIds, restaurantId];
-    
-    setFavoriteIds(newFavorites);
-    localStorage.setItem('kneweat-favorites', JSON.stringify(newFavorites));
+    setFavorites(prev => {
+      const updated = prev.includes(restaurantId)
+        ? prev.filter(id => id !== restaurantId)
+        : [...prev, restaurantId];
+      localStorage.setItem('favorites', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const isFavorite = (restaurantId: string) => {
-    return favoriteIds.includes(restaurantId);
+    return favorites.includes(restaurantId);
   };
 
   if (!isOnboarded) {
@@ -116,7 +114,7 @@ export default function App() {
           {currentPage === 'favorites' && (
             <FavoritesPage
               userProfile={userProfile!}
-              favoriteIds={favoriteIds}
+              favoriteIds={favorites}
               onRestaurantSelect={handleRestaurantSelect}
             />
           )}
@@ -136,3 +134,5 @@ export default function App() {
     </div>
   );
 }
+
+export default App;
