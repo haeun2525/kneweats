@@ -21,6 +21,18 @@ export function RestaurantDetail({ restaurant, userProfile, onBack, isFavorite, 
   const [excludedAllergens, setExcludedAllergens] = useState<string[]>([]);
   const [tempExcludedAllergens, setTempExcludedAllergens] = useState<string[]>([]);
 
+  // compute summary tag counts (same logic as RestaurantCard)
+  const totalMenus = restaurant.menus.length;
+  const unsafeCount = restaurant.menus.filter(menu =>
+    menu.allergens.some(a =>
+      userProfile.allergies.includes(a) ||
+      (userProfile.restrictedFoods && userProfile.restrictedFoods.includes(a))
+    )
+  ).length;
+  const safeCount = Math.max(0, totalMenus - unsafeCount);
+  const showSummaryTag = totalMenus > 0;
+  const isMostlyUnsafe = unsafeCount > totalMenus / 2;
+
   const handleAskInKorean = (menu: Menu, ingredient: string) => {
     setSelectedMenu(menu);
     setPhraseIngredient(ingredient);
@@ -63,9 +75,20 @@ export function RestaurantDetail({ restaurant, userProfile, onBack, isFavorite, 
           alt={restaurant.name}
           className="w-full h-64 object-cover"
         />
+        {showSummaryTag && (
+          <div
+            className={`absolute top-4 right-4 text-white text-sm px-3 py-1.5 rounded-full z-10 ${
+              isMostlyUnsafe ? 'bg-red-500' : 'bg-green-500'
+            }`}
+          >
+            {safeCount}/{totalMenus} are safe for you
+          </div>
+        )}
+        {/* Fixed back button so it's always visible while scrolling */}
         <button
           onClick={onBack}
-          className="absolute top-4 left-4 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg"
+          className="fixed top-4 left-4 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg z-50 safe-area-inset-left"
+          aria-label="Back"
         >
           <ChevronLeft className="size-5 text-gray-700" />
         </button>
@@ -149,6 +172,12 @@ export function RestaurantDetail({ restaurant, userProfile, onBack, isFavorite, 
                 // Exclude menus that contain any allergen selected to be excluded
                 if (excludedAllergens.length > 0) {
                   if (menu.allergens.some(a => excludedAllergens.includes(a))) {
+                    return false;
+                  }
+                }
+                // Exclude menus that contain restricted foods based on dietary preference
+                if (userProfile.restrictedFoods && userProfile.restrictedFoods.length > 0) {
+                  if (menu.allergens.some(a => userProfile.restrictedFoods.includes(a))) {
                     return false;
                   }
                 }

@@ -13,10 +13,11 @@ interface RestaurantCardProps {
   };
   userProfile: {
     allergies: string[];
+    restrictedFoods?: string[];
   };
   onClick: () => void;
   isFavorite?: boolean;
-  onToggleFavorite?: (e: React.MouseEvent) => void;
+  onToggleFavorite?: () => void;
 }
 
 export function RestaurantCard({
@@ -27,13 +28,20 @@ export function RestaurantCard({
   onToggleFavorite
 }: RestaurantCardProps) {
 
-  const hasUserAllergens = restaurant.menus.some(menu =>
-    menu.allergens.some(allergen => userProfile.allergies.includes(allergen))
-  );
+  const totalMenus = restaurant.menus.length;
+  const unsafeCount = restaurant.menus.filter(menu =>
+    menu.allergens.some(allergen =>
+      userProfile.allergies.includes(allergen) ||
+      (userProfile.restrictedFoods && userProfile.restrictedFoods.includes(allergen))
+    )
+  ).length;
+  const safeCount = Math.max(0, totalMenus - unsafeCount);
+  const showSummaryTag = totalMenus > 0;
+  const isMostlyUnsafe = unsafeCount > totalMenus / 2;
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onToggleFavorite?.(e);
+    onToggleFavorite?.();
   };
 
   return (
@@ -48,13 +56,13 @@ export function RestaurantCard({
           className="w-full h-full object-cover"
         />
 
-        {hasUserAllergens ? (
-          <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-            Contains allergens
-          </div>
-        ) : (
-          <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
-            Safe for you
+        {showSummaryTag && (
+          <div
+            className={`absolute top-2 right-2 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap ${
+              isMostlyUnsafe ? 'bg-red-500' : 'bg-green-500'
+            }`}
+          >
+            {safeCount}/{totalMenus} safe for you
           </div>
         )}
       </div>
@@ -78,14 +86,15 @@ export function RestaurantCard({
 
             <button
               onClick={handleFavoriteClick}
-              className="flex-shrink-0 w-8 h-8 bg-orange-50 rounded-full flex items-center justify-center hover:bg-orange-100 transition-colors"
+              aria-pressed={isFavorite}
+              className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 ${
+                isFavorite
+                  ? 'bg-orange-500 text-white shadow-lg transform scale-105'
+                  : 'bg-white border border-gray-200 text-gray-500 hover:bg-orange-50 hover:text-orange-600'
+              }`}
             >
               <Heart
-                className={`size-4 ${
-                  isFavorite
-                    ? 'fill-orange-500 text-orange-500'
-                    : 'text-gray-400 hover:text-orange-500'
-                }`}
+                className={`size-5 ${isFavorite ? 'text-white fill-current' : 'text-gray-400'}`}
               />
             </button>
           </div>

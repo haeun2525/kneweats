@@ -10,7 +10,7 @@ export async function fetchMenus(restaurantId: number): Promise<MenuItem[]> {
     .order("id");
 
   if (error) throw error;
-  return data as MenuItem[];
+  return data as MenuItem[]; 
 }
 
 // 메뉴 추가

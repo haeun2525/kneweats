@@ -2,10 +2,11 @@ import { supabase } from "./client";
 
 export async function getRestaurantsWithMenus() {
   // 1. 레스토랑 전체 조회
-  const { data: restaurants, error: err1 } = await supabase
+    const { data: restaurants, error: err1 } = await supabase
     .from("restaurants")
     .select("*")
-    .order("id");
+    .order("display_order", { ascending: true }) // 새 컬럼 기준 정렬
+    .order("id", { ascending: true });           // 동점일 때 id로 정렬 (옵션)
 
   if (err1) throw err1;
 
@@ -25,7 +26,7 @@ export async function getRestaurantsWithMenus() {
       .map(m => ({
         ...m,
         allergens: m.allergens
-          ? m.allergens.split(",").map(a => a.trim())
+          ? m.allergens.split(",").map((a: string) => a.trim())
           : [],
       })),
   }));

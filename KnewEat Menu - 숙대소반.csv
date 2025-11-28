@@ -1,0 +1,8 @@
+id,restaurant_id,name,allergens
+86,8,Army Stew (Budae Jjigae),"Pork, Soy, Milk, wheat, Gluten"
+87,8,Kimchi Cheese Rice,"Milk, Soy, Wheat"
+88,8,Pork Cutlet,"Pork, Wheat, Egg, Soy"
+89,8,Hamburger Steak,"Beef, Pork, Egg, Wheat"
+90,8,Cheese Fish Roe Rice,"Fish, Milk, Wheat"
+91,8,Cold Noodles,"Wheat, egg, soy"
+92,8,Spicy Chewy Noodles with Soft Tofu,"wheat, egg, soy, sesame"

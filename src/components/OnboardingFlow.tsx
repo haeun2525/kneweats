@@ -43,9 +43,15 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   };
 
   const updateProfile = (updates: Partial<UserProfile>) => {
-    setProfile({ ...profile, ...updates });
+    setProfile(prev => ({ ...prev, ...updates }));
   };
 
+  // Map religions to default restricted foods so we can pre-populate allergies too
+  const restrictedFoodsByReligion: Record<string, string[]> = {
+    Judaism: ['Pork', 'Shellfish', 'Non-kosher meat'],
+    Islam: ['Pork', 'Alcohol', 'Non-halal meat'],
+  };
+  
   const handleComplete = () => {
     onComplete(profile as UserProfile);
   };
@@ -69,7 +75,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           
           {step === 1 && (
             <div className="text-center mb-6">
-              <h1 className="text-orange-600 mb-2">Knew-eat</h1>
+              <h1 className="text-orange-600 mb-2">Ingrepedia</h1>
               <p className="text-gray-600">It's fine, just eat it!</p>
             </div>
           )}
@@ -99,7 +105,10 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           {step === 2 && (
             <ReligionStep
               value={profile.religion || ''}
-              onChange={(religion) => updateProfile({ religion, restrictedFoods: [] })}
+              onChange={(religion) => {
+                const derived = restrictedFoodsByReligion[religion] || [];
+                updateProfile({ religion, restrictedFoods: derived, allergies: derived });
+              }}
               onNext={handleNext}
             />
           )}
@@ -115,6 +124,8 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             <DietaryPreferenceStep
               value={profile.dietaryPreference || ''}
               onChange={(dietaryPreference) => updateProfile({ dietaryPreference })}
+              onRestrictedFoodsChange={(restrictedFoods) => updateProfile({ restrictedFoods })}
+              onAllergiesChange={(allergies) => updateProfile({ allergies })}
               onNext={handleNext}
             />
           )}

@@ -2,6 +2,12 @@ import { useState } from 'react';
 import { Edit2, ChevronRight, MessageCircle, X } from 'lucide-react';
 import { Button } from './ui/button';
 import type { UserProfile } from '../App';
+import { NationalityStep } from './onboarding/NationalityStep';
+import { ReligionStep } from './onboarding/ReligionStep';
+import { RestrictedFoodsStep } from './onboarding/RestrictedFoodsStep';
+import { DietaryPreferenceStep } from './onboarding/DietaryPreferenceStep';
+import { AllergiesStep } from './onboarding/AllergiesStep';
+import { CuisinesStep } from './onboarding/CuisinesStep';
 
 interface MyPageProps {
   userProfile: UserProfile;
@@ -12,6 +18,19 @@ export function MyPage({ userProfile, onProfileUpdate }: MyPageProps) {
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [showKoreanTool, setShowKoreanTool] = useState(false);
   const [selectedAllergen, setSelectedAllergen] = useState<string | null>(null);
+
+  // Editor modal state (which category is being edited)
+  const [editingCategory, setEditingCategory] = useState<
+    null | 'nationality' | 'religion' | 'restrictedFoods' | 'dietaryPreference' | 'allergies' | 'preferredCuisines'
+  >(null);
+
+  // Temporary editable values (initialized when opening editor)
+  const [tempNationality, setTempNationality] = useState(userProfile.nationality);
+  const [tempReligion, setTempReligion] = useState(userProfile.religion);
+  const [tempRestrictedFoods, setTempRestrictedFoods] = useState<string[]>([...userProfile.restrictedFoods]);
+  const [tempDietaryPreference, setTempDietaryPreference] = useState(userProfile.dietaryPreference);
+  const [tempAllergies, setTempAllergies] = useState<string[]>([...userProfile.allergies]);
+  const [tempPreferredCuisines, setTempPreferredCuisines] = useState<string[]>([...userProfile.preferredCuisines]);
 
   const getKoreanIngredient = (ingredient: string): string => {
     const translations: Record<string, string> = {
@@ -78,6 +97,61 @@ export function MyPage({ userProfile, onProfileUpdate }: MyPageProps) {
     'fastfood': 'Fast food',
   };
 
+  const openEditor = (category: typeof editingCategory) => {
+    // initialize temps from current profile so modal shows current values
+    setTempNationality(userProfile.nationality);
+    setTempReligion(userProfile.religion);
+    setTempRestrictedFoods([...userProfile.restrictedFoods]);
+    setTempDietaryPreference(userProfile.dietaryPreference);
+    setTempAllergies([...userProfile.allergies]);
+    setTempPreferredCuisines([...userProfile.preferredCuisines]);
+    setEditingCategory(category);
+  };
+
+  const closeEditor = () => setEditingCategory(null);
+
+  const saveEditor = () => {
+    const updated: UserProfile = {
+      ...userProfile,
+      nationality: tempNationality,
+      religion: tempReligion,
+      restrictedFoods: tempRestrictedFoods,
+      dietaryPreference: tempDietaryPreference,
+      allergies: tempAllergies,
+      preferredCuisines: tempPreferredCuisines,
+    };
+    onProfileUpdate(updated);
+    setEditingCategory(null);
+  };
+
+  // Move the editor modal forward through the onboarding-like steps.
+  const modalNext = () => {
+    if (!editingCategory) return;
+    switch (editingCategory) {
+      case 'nationality':
+        setEditingCategory('religion');
+        break;
+      case 'religion':
+        setEditingCategory('restrictedFoods');
+        break;
+      case 'restrictedFoods':
+        setEditingCategory('dietaryPreference');
+        break;
+      case 'dietaryPreference':
+        setEditingCategory('allergies');
+        break;
+      case 'allergies':
+        setEditingCategory('preferredCuisines');
+        break;
+      case 'preferredCuisines':
+        // finished the mini-flow — save and close
+        saveEditor();
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <div className="min-h-screen">
       <div className="bg-gradient-to-r from-orange-500 to-pink-500 p-6 text-white">
@@ -92,7 +166,11 @@ export function MyPage({ userProfile, onProfileUpdate }: MyPageProps) {
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-gray-700">Nationality</h3>
-            <button className="text-orange-500 hover:text-orange-600">
+            <button
+              onClick={() => openEditor('nationality')}
+              className="text-orange-500 hover:text-orange-600"
+              aria-label="Edit nationality"
+            >
               <Edit2 className="size-4" />
             </button>
           </div>
@@ -103,7 +181,11 @@ export function MyPage({ userProfile, onProfileUpdate }: MyPageProps) {
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-gray-700">Religion</h3>
-            <button className="text-orange-500 hover:text-orange-600">
+            <button
+              onClick={() => openEditor('religion')}
+              className="text-orange-500 hover:text-orange-600"
+              aria-label="Edit religion"
+            >
               <Edit2 className="size-4" />
             </button>
           </div>
@@ -115,7 +197,11 @@ export function MyPage({ userProfile, onProfileUpdate }: MyPageProps) {
           <div className="bg-white rounded-2xl p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-gray-700">Restricted Foods</h3>
-              <button className="text-orange-500 hover:text-orange-600">
+              <button
+                onClick={() => openEditor('restrictedFoods')}
+                className="text-orange-500 hover:text-orange-600"
+                aria-label="Edit restricted foods"
+              >
                 <Edit2 className="size-4" />
               </button>
             </div>
@@ -136,7 +222,11 @@ export function MyPage({ userProfile, onProfileUpdate }: MyPageProps) {
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-gray-700">Dietary Preference</h3>
-            <button className="text-orange-500 hover:text-orange-600">
+            <button
+              onClick={() => openEditor('dietaryPreference')}
+              className="text-orange-500 hover:text-orange-600"
+              aria-label="Edit dietary preference"
+            >
               <Edit2 className="size-4" />
             </button>
           </div>
@@ -147,7 +237,11 @@ export function MyPage({ userProfile, onProfileUpdate }: MyPageProps) {
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-gray-700">Allergies & Restrictions</h3>
-            <button className="text-orange-500 hover:text-orange-600">
+            <button
+              onClick={() => openEditor('allergies')}
+              className="text-orange-500 hover:text-orange-600"
+              aria-label="Edit allergies"
+            >
               <Edit2 className="size-4" />
             </button>
           </div>
@@ -171,7 +265,11 @@ export function MyPage({ userProfile, onProfileUpdate }: MyPageProps) {
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-gray-700">Preferred Cuisines</h3>
-            <button className="text-orange-500 hover:text-orange-600">
+            <button
+              onClick={() => openEditor('preferredCuisines')}
+              className="text-orange-500 hover:text-orange-600"
+              aria-label="Edit preferred cuisines"
+            >
               <Edit2 className="size-4" />
             </button>
           </div>
@@ -262,6 +360,109 @@ export function MyPage({ userProfile, onProfileUpdate }: MyPageProps) {
                 </p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Editor Modal (re-uses onboarding step components for each category) */}
+      {editingCategory && (
+        <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50">
+          <div className="bg-white rounded-t-3xl md:rounded-3xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h2 className="text-gray-800 mb-1">
+                  {editingCategory === 'nationality' && 'Edit nationality'}
+                  {editingCategory === 'religion' && 'Edit religion'}
+                  {editingCategory === 'restrictedFoods' && 'Edit restricted foods'}
+                  {editingCategory === 'dietaryPreference' && 'Edit dietary preference'}
+                  {editingCategory === 'allergies' && 'Edit allergies'}
+                  {editingCategory === 'preferredCuisines' && 'Edit preferred cuisines'}
+                </h2>
+                <p className="text-sm text-gray-500">Update and save to apply to your profile</p>
+              </div>
+              <button
+                onClick={closeEditor}
+                className="text-gray-400 hover:text-gray-600"
+                aria-label="Close editor"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            {/* Dynamic editor body */}
+            <div className="mb-4">
+              {editingCategory === 'nationality' && (
+                <NationalityStep
+                  value={tempNationality}
+                  onChange={(v) => setTempNationality(v)}
+                  onNext={modalNext}
+                />
+              )}
+
+              {editingCategory === 'religion' && (
+                <ReligionStep
+                  value={tempReligion}
+                  onChange={(v) => {
+                    setTempReligion(v);
+                    // update restricted foods when religion changes
+                    const derived = (v === 'Judaism') ? ['Pork','Shellfish','Non-kosher meat'] : (v === 'Islam') ? ['Pork','Alcohol','Non-halal meat'] : [];
+                    setTempRestrictedFoods(derived);
+                    setTempAllergies(derived);
+                  }}
+                  onNext={modalNext}
+                />
+              )}
+
+              {editingCategory === 'restrictedFoods' && (
+                <RestrictedFoodsStep
+                  religion={tempReligion}
+                  value={tempRestrictedFoods}
+                  onChange={(v) => setTempRestrictedFoods(v)}
+                  onNext={modalNext}
+                />
+              )}
+
+              {editingCategory === 'dietaryPreference' && (
+                <DietaryPreferenceStep
+                  value={tempDietaryPreference}
+                  onChange={(v) => setTempDietaryPreference(v)}
+                  onRestrictedFoodsChange={(v) => setTempRestrictedFoods(v)}
+                  onAllergiesChange={(v) => setTempAllergies(v)}
+                  onNext={modalNext}
+                />
+              )}
+
+              {editingCategory === 'allergies' && (
+                <AllergiesStep
+                  value={tempAllergies}
+                  onChange={(v) => setTempAllergies(v)}
+                  onNext={modalNext}
+                />
+              )}
+
+              {editingCategory === 'preferredCuisines' && (
+                <CuisinesStep
+                  value={tempPreferredCuisines}
+                  onChange={(v) => setTempPreferredCuisines(v)}
+                  onComplete={modalNext}
+                />
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={closeEditor}
+                className="flex-1 px-4 py-2 rounded-full bg-white border border-gray-200 text-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEditor}
+                className="flex-1 px-4 py-2 rounded-full bg-orange-500 text-white"
+              >
+                Save
+              </button>
+            </div>
           </div>
         </div>
       )}

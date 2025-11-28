@@ -1,11 +1,14 @@
+import { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
 import { RestaurantCard } from './RestaurantCard';
 import type { UserProfile, Restaurant } from '../App';
+import { getRestaurantsWithMenus } from '../lib/supabase/restaurants';
 
 interface FavoritesPageProps {
   userProfile: UserProfile;
   favoriteIds: string[];
   onRestaurantSelect: (restaurant: Restaurant) => void;
+  onToggleFavorite: (id: string) => void;
 }
 
 // Mock restaurant data - same as in HomePage
@@ -87,10 +90,50 @@ const mockRestaurants: Restaurant[] = [
   },
 ];
 
-export function FavoritesPage({ userProfile, favoriteIds, onRestaurantSelect }: FavoritesPageProps) {
-  const favoriteRestaurants = mockRestaurants.filter(restaurant => 
-    favoriteIds.includes(restaurant.id)
-  );
+export function FavoritesPage({ userProfile, favoriteIds, onRestaurantSelect, onToggleFavorite }: FavoritesPageProps) {
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      try {
+        const data = await getRestaurantsWithMenus();
+        const mapped: Restaurant[] = (data || []).map((r: any) => ({
+          id: String(r.id),
+          name: r.name,
+          image: r.image ?? "",
+          cuisineTags: r.cuisine_tags
+            ? String(r.cuisine_tags).split(",").map((t: string) => t.trim())
+            : [],
+          hasAllergens: false,
+          isVegan: false,
+          isHalal: false,
+          spiciness: 0,
+          distance: r.distance ?? "",
+          menus: (r.menus ?? []).map((m: any) => ({
+            id: String(m.id),
+            name: m.name,
+            allergens: m.allergens ? String(m.allergens).split(",").map((a: string) => a.trim()) : [],
+            spiciness: m.spiciness ?? 0,
+            isSafe: true,
+          })),
+        }));
+
+        if (mounted) setRestaurants(mapped);
+      } catch (err) {
+        console.error("FavoritesPage: failed to load restaurants, using mock", err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+    load();
+    return () => { mounted = false; };
+  }, []);
+
+  // Use fetched restaurants if available, otherwise fallback to mock
+  const source = restaurants.length > 0 ? restaurants : mockRestaurants;
+  const favoriteRestaurants = source.filter((restaurant) => favoriteIds.includes(restaurant.id));
 
   return (
     <div className="min-h-screen">
@@ -110,6 +153,8 @@ export function FavoritesPage({ userProfile, favoriteIds, onRestaurantSelect }: 
                 restaurant={restaurant}
                 userProfile={userProfile}
                 onClick={() => onRestaurantSelect(restaurant)}
+                isFavorite={favoriteIds.includes(restaurant.id)}
+                onToggleFavorite={() => onToggleFavorite(restaurant.id)}
               />
             ))}
           </div>

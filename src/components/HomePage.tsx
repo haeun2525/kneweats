@@ -8,75 +8,74 @@ import { getRestaurantsWithMenus } from "../lib/supabase/restaurants";
 interface HomePageProps {
   userProfile: UserProfile;
   onRestaurantSelect: (restaurant: Restaurant) => void;
+  favoriteIds: string[];
+  onToggleFavorite: (id: string) => void;
 }
 
-const filterOptions = [
-  { id: 'vegan', label: 'Vegan', color: 'green' },
-  { id: 'halal', label: 'Halal-friendly', color: 'blue' },
-  { id: 'spicy', label: 'Spicy', color: 'red' },
-  { id: 'safe', label: 'Allergen-safe', color: 'orange' },
-];
-
-export function HomePage({ userProfile, onRestaurantSelect }: HomePageProps) {
+export function HomePage({ userProfile, onRestaurantSelect, favoriteIds, onToggleFavorite }: HomePageProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Build filter options (changed "vegan" chip to "All safe")
+  const filterOptions = [
+    { id: 'all-safe', label: 'All safe', color: 'green' },
+    { id: 'halal', label: 'Halal-friendly', color: 'blue' },
+    { id: 'spicy', label: 'Spicy', color: 'red' },
+    { id: 'safe', label: 'Allergen-safe', color: 'orange' },
+  ];
 
-useEffect(() => {
-  async function load() {
-    try {
-      const data = await getRestaurantsWithMenus();
-      console.log("supabase raw data >>", data);
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await getRestaurantsWithMenus();
+        console.log("supabase raw data >>", data);
 
-      const mapped: Restaurant[] = data.map((r: any) => ({
-        id: String(r.id),
-        name: r.name,
-        image: r.image ?? "",
+        const mapped: Restaurant[] = data.map((r: any) => ({
+          id: String(r.id),
+          name: r.name,
+          image: r.image ?? "",
 
-        // Supabase 컬럼: cuisine_tages (text, "Korean,Cafe" 이런 형식이라고 가정)
-        cuisineTags: r.cuisine_tags
-          ? String(r.cuisine_tags)
-              .split(",")
-              .map((t: string) => t.trim())
-          : [],
-
-        // 일단 기본값들 (나중에 menus 기반으로 계산 가능)
-        hasAllergens: false,
-        isVegan: false,
-        isHalal: false,
-        spiciness: 0,
-        distance: r.distance ?? "",
-
-        // r.menus 가 없을 수도 있으니까 방어코드
-        menus: (r.menus ?? []).map((m: any) => ({
-          id: String(m.id),
-          name: m.name,
-          allergens: m.allergens
-            ? String(m.allergens)
+          // Supabase 컬럼: cuisine_tages (text, "Korean,Cafe" 이런 형식이라고 가정)
+          cuisineTags: r.cuisine_tags
+            ? String(r.cuisine_tags)
                 .split(",")
-                .map((a: string) => a.trim())
+                .map((t: string) => t.trim())
             : [],
-          spiciness: m.spiciness ?? 0,
-          isSafe: true, // 나중에 userProfile 기준으로 계산 가능
-        })),
-      }));
 
-      console.log("mapped restaurants >>", mapped);
-      setRestaurants(mapped);
-    } catch (err) {
-      console.error("Supabase fetch error:", err);
-    } finally {
-      setLoading(false);
+          // 일단 기본값들 (나중에 menus 기반으로 계산 가능)
+          hasAllergens: false,
+          isVegan: false,
+          isHalal: false,
+          spiciness: 0,
+          distance: r.distance ?? "",
+
+          // r.menus 가 없을 수도 있으니까 방어코드
+          menus: (r.menus ?? []).map((m: any) => ({
+            id: String(m.id),
+            name: m.name,
+            allergens: m.allergens
+              ? String(m.allergens)
+                  .split(",")
+                  .map((a: string) => a.trim())
+              : [],
+            spiciness: m.spiciness ?? 0,
+            isSafe: true, // 나중에 userProfile 기준으로 계산 가능
+          })),
+        }));
+
+        console.log("mapped restaurants >>", mapped);
+        setRestaurants(mapped);
+      } catch (err) {
+        console.error("Supabase fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
     }
-  }
 
-  load();
-}, []);
-
-
-
+    load();
+  }, []);
 
   const toggleFilter = (filterId: string) => {
     if (activeFilters.includes(filterId)) {
@@ -90,7 +89,21 @@ useEffect(() => {
     if (searchTerm && !restaurant.name.toLowerCase().includes(searchTerm.toLowerCase()))
       return false;
 
-    if (activeFilters.includes('vegan') && !restaurant.isVegan) return false;
+    // "All safe" filter: only show restaurants where every menu is safe for the user
+    if (activeFilters.includes('all-safe')) {
+      // treat empty menus as not-all-safe
+      if (!restaurant.menus || restaurant.menus.length === 0) return false;
+
+      const allMenusSafe = restaurant.menus.every(menu =>
+        !menu.allergens.some(allergen =>
+          userProfile.allergies.includes(allergen) ||
+          (userProfile.restrictedFoods && userProfile.restrictedFoods.includes(allergen))
+        )
+      );
+
+      if (!allMenusSafe) return false;
+    }
+
     if (activeFilters.includes('halal') && !restaurant.isHalal) return false;
     if (activeFilters.includes('spicy') && restaurant.spiciness < 2) return false;
     if (activeFilters.includes('safe') && restaurant.hasAllergens) return false;
@@ -158,6 +171,8 @@ useEffect(() => {
                 restaurant={restaurant}
                 userProfile={userProfile}
                 onClick={() => onRestaurantSelect(restaurant)}
+                isFavorite={favoriteIds.includes(restaurant.id)}
+                onToggleFavorite={() => onToggleFavorite(restaurant.id)}
               />
             ))}
 

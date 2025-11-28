@@ -5,13 +5,62 @@ import { Button } from '../ui/button';
 interface DietaryPreferenceStepProps {
   value: string;
   onChange: (value: string) => void;
+  onRestrictedFoodsChange: (foods: string[]) => void;
+  onAllergiesChange?: (allergies: string[]) => void;
   onNext: () => void;
 }
 
 const preferences = ['Vegan', 'Vegetarian', 'Flexitarian', 'None'];
 
-export function DietaryPreferenceStep({ value, onChange, onNext }: DietaryPreferenceStepProps) {
+const restrictedFoodsByDiet: Record<string, string[]> = {
+  Vegan: [
+    'Beef',
+    'Pork',
+    'Chicken',
+    'Lamb',
+    'Fish',
+    'Shellfish',
+    'Shrimp',
+    'Crab',
+    'Squid',
+    'Milk',
+    'Eggs',
+    'Cheese',
+    'Butter',
+    'Yogurt',
+    'Honey',
+  ],
+  Vegetarian: [
+    'Beef',
+    'Pork',
+    'Chicken',
+    'Lamb',
+    'Fish',
+    'Shellfish',
+    'Shrimp',
+    'Crab',
+    'Squid',
+  ],
+  Flexitarian: [],
+  None: [],
+};
+
+export function DietaryPreferenceStep({
+  value,
+  onChange,
+  onRestrictedFoodsChange,
+  onAllergiesChange,
+  onNext,
+}: DietaryPreferenceStepProps) {
   const [showExplanation, setShowExplanation] = useState(false);
+
+  const handleSelectPreference = (pref: string) => {
+    onChange(pref);
+    const derived = restrictedFoodsByDiet[pref] || [];
+    onRestrictedFoodsChange(derived);
+    // Pre-select the same ingredients in the Allergies step so they appear checked
+    onAllergiesChange?.(derived);
+  };
 
   return (
     <div>
@@ -22,7 +71,8 @@ export function DietaryPreferenceStep({ value, onChange, onNext }: DietaryPrefer
         {preferences.map((pref) => (
           <button
             key={pref}
-            onClick={() => onChange(pref)}
+            type="button"
+            onClick={() => handleSelectPreference(pref)}
             className={`w-full p-4 rounded-2xl border-2 transition-all text-left ${
               value === pref
                 ? 'border-orange-500 bg-orange-50 text-orange-700'
@@ -36,6 +86,7 @@ export function DietaryPreferenceStep({ value, onChange, onNext }: DietaryPrefer
 
       {value === 'Vegan' && (
         <button
+          type="button"
           onClick={() => setShowExplanation(!showExplanation)}
           className="flex items-center gap-2 text-sm text-orange-600 mb-4 hover:text-orange-700"
         >

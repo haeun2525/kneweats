@@ -43,28 +43,56 @@ export function App() {
   const [currentPage, setCurrentPage] = useState<'home' | 'favorites' | 'support' | 'account'>('home');
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [favorites, setFavorites] = useState<string[]>(() => {
-    const saved = localStorage.getItem('favorites');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('favorites');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error('Failed to parse favorites from localStorage, clearing it.', e);
+      localStorage.removeItem('favorites');
+      return [];
+    }
   });
 
   useEffect(() => {
-    // Check if user has completed onboarding
-    const savedProfile = localStorage.getItem('kneweat-profile');
+    // Check if user has completed onboarding (safe-parse, validate)
+    const savedProfile = localStorage.getItem('ingrepedia-profile');
+    console.log('🔍 Checking for saved profile...', savedProfile ? 'Found' : 'Not found');
+    
     if (savedProfile) {
-      setUserProfile(JSON.parse(savedProfile));
-      setIsOnboarded(true);
+      try {
+        const parsed = JSON.parse(savedProfile);
+        console.log('✅ Parsed profile:', parsed);
+        
+        // More permissive validation: just check it's an object
+        if (parsed && typeof parsed === 'object') {
+          console.log('✅ Profile is valid object, setting user profile');
+          setUserProfile(parsed as UserProfile);
+          setIsOnboarded(true);
+        } else {
+          throw new Error('Profile is not a valid object');
+        }
+      } catch (err) {
+        console.error('❌ Failed to parse/validate saved profile; clearing.', err);
+        localStorage.removeItem('ingrepedia-profile');
+        setIsOnboarded(false);
+        setUserProfile(null);
+      }
+    } else {
+      console.log('ℹ️ No saved profile, showing onboarding');
+      setIsOnboarded(false);
+      setUserProfile(null);
     }
   }, []);
 
   const handleOnboardingComplete = (profile: UserProfile) => {
     setUserProfile(profile);
     setIsOnboarded(true);
-    localStorage.setItem('kneweat-profile', JSON.stringify(profile));
+    localStorage.setItem('ingrepedia-profile', JSON.stringify(profile));
   };
 
   const handleProfileUpdate = (profile: UserProfile) => {
     setUserProfile(profile);
-    localStorage.setItem('kneweat-profile', JSON.stringify(profile));
+    localStorage.setItem('ingrepedia-profile', JSON.stringify(profile));
   };
 
   const handleRestaurantSelect = (restaurant: Restaurant) => {
@@ -89,10 +117,15 @@ export function App() {
     return favorites.includes(restaurantId);
   };
 
-  if (!isOnboarded) {
+  // Ensure we only render the main app when we have a valid profile.
+  console.log('🎯 Render check: isOnboarded =', isOnboarded, 'userProfile =', userProfile ? 'exists' : 'null');
+  
+  if (!isOnboarded || !userProfile) {
+    console.log('📝 Showing OnboardingFlow');
     return <OnboardingFlow onComplete={handleOnboardingComplete} />;
   }
 
+  console.log('🏠 Showing HomePage');
   return (
     <div className="min-h-screen bg-orange-50/30 pb-20">
       {selectedRestaurant ? (
@@ -109,6 +142,8 @@ export function App() {
             <HomePage 
               userProfile={userProfile!} 
               onRestaurantSelect={handleRestaurantSelect}
+              favoriteIds={favorites}
+              onToggleFavorite={(id) => toggleFavorite(id)}
             />
           )}
           {currentPage === 'favorites' && (
@@ -116,6 +151,7 @@ export function App() {
               userProfile={userProfile!}
               favoriteIds={favorites}
               onRestaurantSelect={handleRestaurantSelect}
+              onToggleFavorite={(id) => toggleFavorite(id)}
             />
           )}
           {currentPage === 'support' && <FeedbackSupport />}
