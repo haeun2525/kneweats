@@ -76,7 +76,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           {step === 1 && (
             <div className="text-center mb-6">
               <h1 className="text-orange-600 mb-2">Ingrepedia</h1>
-              <p className="text-gray-600">It's fine, just eat it!</p>
+              <p className="text-gray-600">Tell us who you are, We'll tell you where to eat.</p>
             </div>
           )}
 
